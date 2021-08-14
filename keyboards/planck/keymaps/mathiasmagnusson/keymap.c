@@ -54,6 +54,10 @@ enum planck_keycodes {
     DVORAK = SAFE_RANGE,
     QWERTY,
     BACKLIT,
+    SEQ_UNDO,
+    SEQ_CUT,
+    SEQ_COPY,
+    SEQ_PASTE,
 };
 
 #define LOWER MO(_LOWER)
@@ -158,16 +162,16 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------+------+------+------+------+------+------|
  * |      |      |      |      |      |      |      |   4  |   5  |   6  |   *  |      |
  * |------+------+------+------+------+------+------+------+------+------+------+------|
- * |      |      |      |      |      |      |      |   1  |   2  |   3  |   -  |      |
+ * |      |  cut | copy | paste|      |      |      |   1  |   2  |   3  |   -  |      |
  * |------+------+------+------+------+------+------+------+------+------+------+------|
  * |      |      |      |      |      |      |      |   0  |   .  |   ,  |   +  |      |
  * `-----------------------------------------------------------------------------------'
  */
 [_EXTRA] = LAYOUT_planck_grid(
-    _______, _______, _______, _______, _______, _______, _______, KC_7,    KC_8,    KC_9,    KC_SLSH, _______,
-    _______, _______, _______, _______, _______, _______, _______, KC_4,    KC_5,    KC_6,    KC_ASTR, _______,
-    _______, _______, _______, _______, _______, _______, _______, KC_1,    KC_2,    KC_3,    KC_MINS, _______,
-    _______, _______, _______, _______, _______, _______, _______, KC_0,    KC_DOT,  KC_COMM, KC_PLUS, _______
+    _______, _______,  _______, _______,  _______,   _______, _______, KC_7,    KC_8,    KC_9,    KC_SLSH, _______,
+    _______, _______,  _______, _______,  _______,   _______, _______, KC_4,    KC_5,    KC_6,    KC_ASTR, _______,
+    _______, SEQ_UNDO, SEQ_CUT, SEQ_COPY, SEQ_PASTE, _______, _______, KC_1,    KC_2,    KC_3,    KC_MINS, _______,
+    _______, _______,  _______, _______,  _______,   _______, _______, KC_0,    KC_DOT,  KC_COMM, KC_PLUS, _______
 ),
 
 };
@@ -189,13 +193,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 set_single_persistent_default_layer(_QWERTY);
             }
             return false;
-            break;
         case DVORAK:
             if (record->event.pressed) {
                 set_single_persistent_default_layer(_DVORAK);
             }
             return false;
-            break;
         case BACKLIT:
             if (record->event.pressed) {
                 register_code(KC_RSFT);
@@ -212,11 +214,22 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 #endif
             }
             return false;
-            break;
         case KC_LSHIFT:
             shift_is_pressed = record->event.pressed;
             return true;
             break;
+        case SEQ_UNDO:
+            if (record->event.pressed) tap_code16(C(KC_Z));
+            return false;
+        case SEQ_CUT:
+            if (record->event.pressed) tap_code16(C(KC_X));
+            return false;
+        case SEQ_COPY:
+            if (record->event.pressed) tap_code16(C(KC_C));
+            return false;
+        case SEQ_PASTE:
+            if (record->event.pressed) tap_code16(C(KC_V));
+            return false;
     }
     return true;
 }
