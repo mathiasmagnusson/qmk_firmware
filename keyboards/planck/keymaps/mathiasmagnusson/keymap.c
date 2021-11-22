@@ -15,7 +15,6 @@
  */
 
 #include QMK_KEYBOARD_H
-#include "muse.h"
 
 enum unicode_names {
     RNG_A_S, // å
@@ -40,8 +39,8 @@ const uint32_t PROGMEM unicode_map[] = {
 #define UML_O XP(UML_O_S, UML_O_B)
 
 enum planck_layers {
-    _QWERTY,
     _DVORAK,
+    _QWERTY,
     _LOWER,
     _RAISE,
     _ADJUST,
@@ -58,6 +57,7 @@ enum planck_keycodes {
     SEQ_CUT,
     SEQ_COPY,
     SEQ_PASTE,
+    CUS_UNI,
 };
 
 #define LOWER MO(_LOWER)
@@ -142,7 +142,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * ,-----------------------------------------------------------------------------------.
  * |      | Reset|Debug | RGB  |RGBMOD| HUE+ | HUE- | SAT+ | SAT- |BRGTH+|BRGTH-|      |
  * |------+------+------+------+------+------+------+------+------+------+------+------|
- * |      |      |MUSmod|Aud on|Audoff|AGnorm|AGswap|Dvorak|Qwerty|LX/WIN|      |      |
+ * |      |      |MUSmod|Aud on|Audoff|AGnorm|AGswap|Dvorak|Qwerty|LX/WIN|CUSUNI|      |
  * |------+------+------+------+------+------+------+------+------+------+------+------|
  * |      |Voice-|Voice+|Mus on|Musoff|MIDIon|MIDIof|TermOn|TermOf|      |      |      |
  * |------+------+------+------+------+------+------+------+------+------+------+------|
@@ -151,7 +151,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  */
 [_ADJUST] = LAYOUT_planck_grid(
     _______, RESET,   DEBUG,   RGB_TOG, RGB_MOD, RGB_HUI, RGB_HUD, RGB_SAI, RGB_SAD,  RGB_VAI, RGB_VAD, _______,
-    _______, _______, MU_MOD,  AU_ON,   AU_OFF,  AG_NORM, AG_SWAP, DVORAK,  QWERTY,   UC_MOD,  _______, _______,
+    _______, _______, MU_MOD,  AU_ON,   AU_OFF,  AG_NORM, AG_SWAP, DVORAK,  QWERTY,   UC_MOD,  CUS_UNI, _______,
     _______, MUV_DE,  MUV_IN,  MU_ON,   MU_OFF,  MI_ON,   MI_OFF,  TERM_ON, TERM_OFF, _______, _______, _______,
     _______, _______, _______, _______, _______, _______, _______, _______, _______,  _______, _______, _______
 ),
@@ -176,14 +176,12 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 };
 
-#ifdef AUDIO_ENABLE
-#endif
-
 layer_state_t layer_state_set_user(layer_state_t state) {
     return update_tri_layer_state(state, _LOWER, _RAISE, _ADJUST);
 }
 
 bool shift_is_pressed = false;
+bool use_custom_unicode = true;
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
@@ -196,22 +194,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case DVORAK:
             if (record->event.pressed) {
                 set_single_persistent_default_layer(_DVORAK);
-            }
-            return false;
-        case BACKLIT:
-            if (record->event.pressed) {
-                register_code(KC_RSFT);
-                #ifdef BACKLIGHT_ENABLE
-                    backlight_step();
-                #endif
-                #ifdef KEYBOARD_planck_rev5
-                    writePinLow(E6);
-                #endif
-            } else {
-                unregister_code(KC_RSFT);
-                #ifdef KEYBOARD_planck_rev5
-                    writePinHigh(E6);
-                #endif
             }
             return false;
         case KC_LSHIFT:
@@ -230,122 +212,53 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case SEQ_PASTE:
             if (record->event.pressed) tap_code16(C(KC_V));
             return false;
-    }
-    return true;
-}
-
-bool muse_mode = false;
-uint8_t last_muse_note = 0;
-uint16_t muse_counter = 0;
-uint8_t muse_offset = 70;
-uint16_t muse_tempo = 50;
-
-void encoder_update(bool clockwise) {
-    if (muse_mode) {
-        if (IS_LAYER_ON(_RAISE)) {
-            if (clockwise) {
-                muse_offset++;
-            } else {
-                muse_offset--;
-            }
-        } else {
-            if (clockwise) {
-                muse_tempo += 1;
-            } else {
-                muse_tempo -= 1;
-            }
-        }
-    } else {
-        if (clockwise) {
-            #ifdef MOUSEKEY_ENABLE
-                tap_code(KC_MS_WH_DOWN);
-            #else
-                tap_code(KC_PGDN);
-            #endif
-        } else {
-            #ifdef MOUSEKEY_ENABLE
-                tap_code(KC_MS_WH_UP);
-            #else
-                tap_code(KC_PGUP);
-            #endif
-        }
-    }
-}
-
-/* void dip_switch_update_user(uint8_t index, bool active) { */
-/*     switch (index) { */
-/*         case 0: { */
-/* #ifdef AUDIO_ENABLE */
-/*             static bool play_sound = false; */
-/* #endif */
-/*             if (active) { */
-/* #ifdef AUDIO_ENABLE */
-/*                 if (play_sound) { PLAY_SONG(plover_song); } */
-/* #endif */
-/*                 layer_on(_ADJUST); */
-/*             } else { */
-/* #ifdef AUDIO_ENABLE */
-/*                 if (play_sound) { PLAY_SONG(plover_gb_song); } */
-/* #endif */
-/*                 layer_off(_ADJUST); */
-/*             } */
-/* #ifdef AUDIO_ENABLE */
-/*             play_sound = true; */
-/* #endif */
-/*             break; */
-/*         } */
-/*         case 1: */
-/*             if (active) { */
-/*                 muse_mode = true; */
-/*             } else { */
-/*                 muse_mode = false; */
-/*             } */
-/*     } */
-/* } */
-
-void matrix_scan_user(void) {
-#ifdef AUDIO_ENABLE
-    if (muse_mode) {
-        if (muse_counter == 0) {
-            uint8_t muse_note = muse_offset + SCALE[muse_clock_pulse()];
-            if (muse_note != last_muse_note) {
-                stop_note(compute_freq_for_midi_note(last_muse_note));
-                play_note(compute_freq_for_midi_note(muse_note), 0xF);
-                last_muse_note = muse_note;
-            }
-        }
-        muse_counter = (muse_counter + 1) % muse_tempo;
-    } else {
-        if (muse_counter) {
-            stop_all_notes();
-            muse_counter = 0;
-        }
-    }
-#endif
-}
-
-bool music_mask_user(uint16_t keycode) {
-    switch (keycode) {
-        case RAISE:
-        case LOWER:
+        case CUS_UNI:
+            if (record->event.pressed) use_custom_unicode = !use_custom_unicode;
             return false;
+        case RNG_A:
+            if (use_custom_unicode) {
+                if (record->event.pressed)
+                    register_code16(RALT(KC_W));
+                else
+                    unregister_code16(RALT(KC_W));
+                return false;
+            }
+            return true;
+        case UML_A:
+            if (use_custom_unicode) {
+                if (record->event.pressed)
+                    register_code16(RALT(KC_Q));
+                else
+                    unregister_code16(RALT(KC_Q));
+                return false;
+            }
+            return true;
+        case UML_O:
+            if (use_custom_unicode) {
+                if (record->event.pressed)
+                    register_code16(RALT(KC_P));
+                else
+                    unregister_code16(RALT(KC_P));
+                return false;
+            }
+            return true;
         default:
             return true;
     }
 }
 
-// Original funcion is bugged
-uint16_t unicodemap_index(uint16_t keycode) {
-    if (keycode >= QK_UNICODEMAP_PAIR) {
-        // Keycode is a pair: extract index based on Shift / Caps Lock state
-        uint16_t index = keycode - QK_UNICODEMAP_PAIR;
-
-        bool shift = shift_is_pressed, caps = IS_HOST_LED_ON(USB_LED_CAPS_LOCK);
-        if (shift ^ caps) index >>= 7;
-
-        return index & 0x7F;
+void encoder_update(bool clockwise) {
+    if (clockwise) {
+        #ifdef MOUSEKEY_ENABLE
+            tap_code(KC_MS_WH_DOWN);
+        #else
+            tap_code(KC_PGDN);
+        #endif
     } else {
-        // Keycode is a regular index
-        return keycode - QK_UNICODEMAP;
+        #ifdef MOUSEKEY_ENABLE
+            tap_code(KC_MS_WH_UP);
+        #else
+            tap_code(KC_PGUP);
+        #endif
     }
 }
